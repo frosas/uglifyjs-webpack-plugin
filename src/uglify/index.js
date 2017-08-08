@@ -1,10 +1,9 @@
 import os from 'os';
+import cacache from 'cacache';
 import findCacheDir from 'find-cache-dir';
 import workerFarm from 'worker-farm';
 import minify from './minify';
-import { get, put } from './cache';
 import { encode } from './serialization';
-import versions from './versions';
 
 let workerFile = require.resolve('./worker');
 
@@ -67,20 +66,19 @@ export default class {
     };
 
     tasks.forEach((task, index) => {
-      const cacheIdentifier = `${versions.uglify}|${versions.plugin}|${task.input}`;
       const enqueue = () => {
         this.worker(task, (error, data) => {
           const result = error ? { error } : data;
           const done = () => step(index, result);
           if (this.cache && !result.error) {
-            put(this.cache, task.cacheKey, data, cacheIdentifier).then(done, done);
+            cacache.put(this.cache, task.cacheKey, JSON.stringify(data)).then(done, done);
           } else {
             done();
           }
         });
       };
       if (this.cache) {
-        get(this.cache, task.cacheKey, cacheIdentifier).then(data => step(index, data), enqueue);
+        cacache.get(this.cache, task.cacheKey).then(({ data }) => step(index, JSON.parse(data)), enqueue);
       } else {
         enqueue();
       }

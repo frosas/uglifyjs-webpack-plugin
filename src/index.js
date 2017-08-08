@@ -10,6 +10,8 @@ import ModuleFilenameHelpers from 'webpack/lib/ModuleFilenameHelpers';
 import validateOptions from 'schema-utils';
 import schema from './options.json';
 import Uglify from './uglify';
+import { encode } from './uglify/serialization';
+import versions from './uglify/versions';
 
 /* eslint-disable
   no-param-reassign
@@ -111,7 +113,7 @@ class UglifyJsPlugin {
             try {
               let input;
               let inputSourceMap;
-              const cacheKey = `${compiler.outputPath}/${file}`;
+
               if (this.options.sourceMap) {
                 if (asset.sourceAndMap) {
                   const sourceAndMap = asset.sourceAndMap();
@@ -134,6 +136,14 @@ class UglifyJsPlugin {
                   commentsFile = commentsFile(file);
                 }
               }
+
+              const cacheKey = JSON.stringify({
+                'uglify-es': versions.uglify,
+                'uglifyjs-webpack-plugin': versions.plugin,
+                'uglifyjs-webpack-plugin-options': this.options,
+                path: `${compiler.outputPath}/${file}`,
+                input,
+              }, encode);
 
               tasks.push({
                 cacheKey,
